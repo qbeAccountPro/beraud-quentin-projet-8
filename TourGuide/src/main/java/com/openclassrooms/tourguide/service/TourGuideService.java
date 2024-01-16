@@ -8,12 +8,14 @@ import com.openclassrooms.tourguide.user.UserReward;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -32,6 +34,7 @@ import tripPricer.TripPricer;
 
 @Service
 public class TourGuideService {
+
 	private Logger logger = LoggerFactory.getLogger(TourGuideService.class);
 	private final GpsUtil gpsUtil;
 	private final RewardsService rewardsService;
@@ -42,7 +45,7 @@ public class TourGuideService {
 	public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService) {
 		this.gpsUtil = gpsUtil;
 		this.rewardsService = rewardsService;
-		
+
 		Locale.setDefault(Locale.US);
 
 		if (testMode) {
@@ -69,7 +72,7 @@ public class TourGuideService {
 		return internalUserMap.get(userName);
 	}
 
-	public List<User> getAllUsers() {
+	public synchronized List<User> getAllUsers() {
 		return internalUserMap.values().stream().collect(Collectors.toList());
 	}
 
@@ -79,7 +82,7 @@ public class TourGuideService {
 		}
 	}
 
-	public List<Provider> getTripDeals(User user) {
+	public synchronized List<Provider> getTripDeals(User user) {
 		int cumulatativeRewardPoints = user.getUserRewards().stream().mapToInt(i -> i.getRewardPoints()).sum();
 		List<Provider> providers = tripPricer.getPrice(tripPricerApiKey, user.getUserId(),
 				user.getUserPreferences().getNumberOfAdults(), user.getUserPreferences().getNumberOfChildren(),
@@ -88,25 +91,32 @@ public class TourGuideService {
 		return providers;
 	}
 
-	public VisitedLocation trackUserLocation(User user) {
+	public synchronized VisitedLocation trackUserLocation(User user) {
 		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
-		user.addToVisitedLocations(visitedLocation);
+		user.addToVisitedLocations(visitedLocation); // on ne peut faire ceci si on parcour la list on doit trouver le moyen
 		rewardsService.calculateRewards(user);
 		return visitedLocation;
 	}
 
-	public List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
-		List<Attraction> nearbyAttractions = new ArrayList<>();
-		for (Attraction attraction : gpsUtil.getAttractions()) {
-			if (rewardsService.isWithinAttractionProximity(attraction, visitedLocation.location)) {
-				nearbyAttractions.add(attraction);
-			}
-		}
+	public synchronized List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
 
+		List<Attraction> nearbyAttractions = gpsUtil.getAttractions().stream()
+				.filter(attraction -> rewardsService.isWithinAttractionProximity(attraction, visitedLocation.location))
+				.collect(Collectors.toList());
+
+		if (nearbyAttractions.isEmpty()) {
+			List<Attraction> fiveNearestAttractions = gpsUtil.getAttractions().stream()
+					.sorted(Comparator
+							.comparingDouble(attraction -> rewardsService.getDistance(attraction, visitedLocation.location)))
+					.limit(5)
+					.collect(Collectors.toList());
+
+			nearbyAttractions.addAll(fiveNearestAttractions);
+		}
 		return nearbyAttractions;
 	}
 
-	private void addShutDownHook() {
+	private synchronized void addShutDownHook() {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
 				tracker.stopTracking();
@@ -137,7 +147,7 @@ public class TourGuideService {
 		logger.debug("Created " + InternalTestHelper.getInternalUserNumber() + " internal test users.");
 	}
 
-	private void generateUserLocationHistory(User user) {
+	private synchronized void generateUserLocationHistory(User user) {
 		IntStream.range(0, 3).forEach(i -> {
 			user.addToVisitedLocations(new VisitedLocation(user.getUserId(),
 					new Location(generateRandomLatitude(), generateRandomLongitude()), getRandomTime()));

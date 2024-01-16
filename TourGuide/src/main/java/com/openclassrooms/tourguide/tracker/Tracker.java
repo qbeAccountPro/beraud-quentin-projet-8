@@ -1,6 +1,7 @@
 package com.openclassrooms.tourguide.tracker;
 
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -43,9 +44,14 @@ public class Tracker extends Thread {
 			}
 
 			List<User> users = tourGuideService.getAllUsers();
+			CopyOnWriteArrayList<User> usersCoW = new CopyOnWriteArrayList<>(users);
 			logger.debug("Begin Tracker. Tracking " + users.size() + " users.");
 			stopWatch.start();
-			users.forEach(u -> tourGuideService.trackUserLocation(u));
+			for (User u : usersCoW) {
+				tourGuideService.trackUserLocation(u);
+			}
+			// users.forEach(u -> tourGuideService.trackUserLocation(u));
+
 			stopWatch.stop();
 			logger.debug("Tracker Time Elapsed: " + TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime()) + " seconds.");
 			stopWatch.reset();

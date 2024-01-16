@@ -57,11 +57,11 @@ public class User {
 		return latestLocationTimestamp;
 	}
 	
-	public void addToVisitedLocations(VisitedLocation visitedLocation) {
+	public synchronized void addToVisitedLocations(VisitedLocation visitedLocation) {
 		visitedLocations.add(visitedLocation);
 	}
 	
-	public List<VisitedLocation> getVisitedLocations() {
+	public  List<VisitedLocation> getVisitedLocations() {
 		return visitedLocations;
 	}
 	
@@ -70,12 +70,12 @@ public class User {
 	}
 	
 	public void addUserReward(UserReward userReward) {
-		if(userRewards.stream().filter(r -> !r.attraction.attractionName.equals(userReward.attraction)).count() == 0) {
+		if(userRewards.stream().filter(r -> r.attraction.attractionName.equals(userReward.attraction.attractionName)).count() == 0) {
 			userRewards.add(userReward);
-		}
+		} 
 	}
 	
-	public List<UserReward> getUserRewards() {
+	public synchronized List<UserReward> getUserRewards() {
 		return userRewards;
 	}
 	
