@@ -17,10 +17,8 @@ import com.openclassrooms.tourguide.user.UserReward;
 
 @Service
 public class RewardsService {
-	private static final double STATUTE_MILES_PER_NAUTICAL_MILE = 1.15077945; // TODO quest ce pourquoi ne pas le réalise
-																																						// en métric au lieu de passer de miles
-																																						// nautique a surfacien?
-
+	private static final double STATUTE_MILES_PER_NAUTICAL_MILE = 1.15077945; 
+	
 	// proximity in miles
 	private int defaultProximityBuffer = 10;
 	private int proximityBuffer = defaultProximityBuffer;
@@ -45,23 +43,16 @@ public class RewardsService {
 		Lock verrou = new ReentrantLock();
 		verrou.lock();
 		try {
-			System.out.println("Lock");
 			List<VisitedLocation> userLocations = user.getVisitedLocations();
 			CopyOnWriteArrayList<VisitedLocation> userLocationsCoW = new CopyOnWriteArrayList<>(userLocations);
 			List<Attraction> attractions = gpsUtil.getAttractions();
 
-			System.out.println("Size user location :" + userLocations.size());
-			System.out.println("Size user cow location :" + userLocationsCoW.size());
-			System.out.println("Size attractions :" + attractions.size());
-
 			for (VisitedLocation visitedLocation : userLocationsCoW) {
 				for (Attraction attraction : attractions) {
 					List<UserReward> userRewards = user.getUserRewards();
-					System.out.println("UserReward =" + userRewards.size());
 					if (user.getUserRewards().stream().filter(r -> r.attraction.attractionName.equals(attraction.attractionName))
 							.count() == 0) {
 						if (nearAttraction(visitedLocation, attraction)) {
-							System.out.println("+1");
 							user.addUserReward(new UserReward(visitedLocation, attraction,
 									getRewardPoints(attraction, user)));
 						}

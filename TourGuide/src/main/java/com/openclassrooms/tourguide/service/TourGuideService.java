@@ -1,5 +1,7 @@
 package com.openclassrooms.tourguide.service;
 
+import com.openclassrooms.tourguide.dto.FiveNearbyAttractions;
+import com.openclassrooms.tourguide.dto.NearestAttraction;
 import com.openclassrooms.tourguide.helper.InternalTestHelper;
 import com.openclassrooms.tourguide.tracker.Tracker;
 import com.openclassrooms.tourguide.user.User;
@@ -28,7 +30,7 @@ import gpsUtil.GpsUtil;
 import gpsUtil.location.Attraction;
 import gpsUtil.location.Location;
 import gpsUtil.location.VisitedLocation;
-
+import rewardCentral.RewardCentral;
 import tripPricer.Provider;
 import tripPricer.TripPricer;
 
@@ -38,13 +40,15 @@ public class TourGuideService {
 	private Logger logger = LoggerFactory.getLogger(TourGuideService.class);
 	private final GpsUtil gpsUtil;
 	private final RewardsService rewardsService;
+	private final RewardCentral rewardsCentral;
 	private final TripPricer tripPricer = new TripPricer();
 	public final Tracker tracker;
 	boolean testMode = true;
 
-	public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService) {
+	public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService, RewardCentral rewardsCentral) {
 		this.gpsUtil = gpsUtil;
 		this.rewardsService = rewardsService;
+		this.rewardsCentral = rewardsCentral;
 
 		Locale.setDefault(Locale.US);
 
@@ -93,27 +97,20 @@ public class TourGuideService {
 
 	public synchronized VisitedLocation trackUserLocation(User user) {
 		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
-		user.addToVisitedLocations(visitedLocation); // on ne peut faire ceci si on parcour la list on doit trouver le moyen
+		user.addToVisitedLocations(visitedLocation);
 		rewardsService.calculateRewards(user);
 		return visitedLocation;
 	}
 
 	public synchronized List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
 
-		List<Attraction> nearbyAttractions = gpsUtil.getAttractions().stream()
-				.filter(attraction -> rewardsService.isWithinAttractionProximity(attraction, visitedLocation.location))
+		List<Attraction> fiveNearestAttractions = gpsUtil.getAttractions().stream()
+				.sorted(Comparator
+						.comparingDouble(attraction -> rewardsService.getDistance(attraction, visitedLocation.location)))
+				.limit(5)
 				.collect(Collectors.toList());
 
-		if (nearbyAttractions.isEmpty()) {
-			List<Attraction> fiveNearestAttractions = gpsUtil.getAttractions().stream()
-					.sorted(Comparator
-							.comparingDouble(attraction -> rewardsService.getDistance(attraction, visitedLocation.location)))
-					.limit(5)
-					.collect(Collectors.toList());
-
-			nearbyAttractions.addAll(fiveNearestAttractions);
-		}
-		return nearbyAttractions;
+		return fiveNearestAttractions;
 	}
 
 	private synchronized void addShutDownHook() {
@@ -122,6 +119,33 @@ public class TourGuideService {
 				tracker.stopTracking();
 			}
 		});
+	}
+
+	public FiveNearbyAttractions getFiveNearbyAttractionsWithRewardsPoint(String userName) {
+
+		// User information :
+		User user = getUser(userName);
+		VisitedLocation userVisitedLocation = getUserLocation(user);
+		Location userLocation = userVisitedLocation.location;
+
+		// Set loca of user :
+		double lat = userLocation.latitude;
+		double lon = userLocation.longitude;
+
+		// Get the attraction and set up the map :
+		List<NearestAttraction> nearestAttractions = new ArrayList();
+
+		for (Attraction attraction : getNearByAttractions(userVisitedLocation)) {
+			int rewardPoints = rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());
+			double distance = rewardsService.getDistance(userLocation, userLocation); // TODO check it's look like it's 0 each time
+			NearestAttraction NA = new NearestAttraction(attraction, rewardPoints, distance);
+			nearestAttractions.add(NA);
+		}
+
+		// Init request data :
+		FiveNearbyAttractions fiveNA = new FiveNearbyAttractions(lat, lon, nearestAttractions);
+		
+		return fiveNA;
 	}
 
 	/**********************************************************************************
