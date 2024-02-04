@@ -4,7 +4,6 @@ import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * Some javadoc :
@@ -17,9 +16,8 @@ import lombok.NoArgsConstructor;
  */
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
 public class FiveNearbyAttractions {
-  double latUser;
-  double lonUser;
+  double latitudeUser;
+  double longitudeUser;
   List<NearestAttraction> nearestAttractions;
 }

@@ -3,19 +3,15 @@ package com.openclassrooms.tourguide;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import gpsUtil.location.Attraction;
 import gpsUtil.location.VisitedLocation;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openclassrooms.tourguide.communUtils.CommunUtilsTools;
 import com.openclassrooms.tourguide.dto.FiveNearbyAttractions;
 import com.openclassrooms.tourguide.logging.EndpointsLogger;
-import com.openclassrooms.tourguide.service.Serialization;
 import com.openclassrooms.tourguide.service.TourGuideService;
 import com.openclassrooms.tourguide.user.User;
 import com.openclassrooms.tourguide.user.UserReward;
@@ -26,8 +22,6 @@ import tripPricer.Provider;
 public class TourGuideController {
 
     private EndpointsLogger log = new EndpointsLogger();
-
-    Serialization serialization = new Serialization();
 
     @Autowired
     TourGuideService tourGuideService;
@@ -43,8 +37,10 @@ public class TourGuideController {
     }
 
     // TODO: Change this method to no longer return a List of Attractions.
-    // Instead: Get the closest five tourist attractions to the user - no matter how
+    // GOOD - Instead: Get the closest five tourist attractions to the user - no
+    // matter how
     // far away they are.
+
     // Return a new JSON object that contains:
     // Name of Tourist attraction,
     // Tourist attractions lat/long,
@@ -53,17 +49,16 @@ public class TourGuideController {
     // attractions.
     // The reward points for visiting each Attraction.
     // Note: Attraction reward points can be gathered from RewardsCentral
+
     @RequestMapping("/getNearbyAttractions")
-    public ResponseEntity<ObjectNode> getNearbyAttractions(@RequestParam String userName) {
-
-        String methodeName = CommunUtilsTools.getCurrentMethodName();
-        
-        log.request(methodeName);
-
-        FiveNearbyAttractions fiveNearbyAttractions = tourGuideService
+    public FiveNearbyAttractions getNearbyAttractions(@RequestParam String userName) {
+        log.request(CommunUtilsTools.getCurrentMethodName());
+        return tourGuideService
                 .getFiveNearbyAttractionsWithRewardsPoint(userName);
+        // TODO CHECK DISTANT VALUE IS 0 BUT THE RETURN WORKS
+        // TODO check Attraction model car il y à des infos superflu renvoyer créer un
+        // DTO en plus
 
-        return serialization.nearbyAttractionsSerialization(fiveNearbyAttractions, methodeName);
     }
 
     @RequestMapping("/getRewards")

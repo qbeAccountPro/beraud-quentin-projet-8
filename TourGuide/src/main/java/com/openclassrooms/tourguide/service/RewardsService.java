@@ -1,30 +1,36 @@
 package com.openclassrooms.tourguide.service;
 
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import com.openclassrooms.tourguide.user.User;
+import com.openclassrooms.tourguide.user.UserReward;
 
 import gpsUtil.GpsUtil;
 import gpsUtil.location.Attraction;
 import gpsUtil.location.Location;
 import gpsUtil.location.VisitedLocation;
 import rewardCentral.RewardCentral;
-import com.openclassrooms.tourguide.user.User;
-import com.openclassrooms.tourguide.user.UserReward;
 
 @Service
 public class RewardsService {
-	private static final double STATUTE_MILES_PER_NAUTICAL_MILE = 1.15077945; 
-	
+	private static final double STATUTE_MILES_PER_NAUTICAL_MILE = 1.15077945;
+
 	// proximity in miles
 	private int defaultProximityBuffer = 10;
 	private int proximityBuffer = defaultProximityBuffer;
 	private int attractionProximityRange = 200;
 	private final GpsUtil gpsUtil;
 	private final RewardCentral rewardsCentral;
+
+	@Value("${threadForRewardsService}")
+	private int thread;
 
 	public RewardsService(GpsUtil gpsUtil, RewardCentral rewardCentral) {
 		this.gpsUtil = gpsUtil;
@@ -39,50 +45,37 @@ public class RewardsService {
 		proximityBuffer = defaultProximityBuffer;
 	}
 
-	public synchronized void calculateRewards(User user) {
-		Lock verrou = new ReentrantLock();
-		verrou.lock();
-		try {
-			List<VisitedLocation> userLocations = user.getVisitedLocations();
-			CopyOnWriteArrayList<VisitedLocation> userLocationsCoW = new CopyOnWriteArrayList<>(userLocations);
-			List<Attraction> attractions = gpsUtil.getAttractions();
-
-			for (VisitedLocation visitedLocation : userLocationsCoW) {
-				for (Attraction attraction : attractions) {
-					List<UserReward> userRewards = user.getUserRewards();
-					if (user.getUserRewards().stream().filter(r -> r.attraction.attractionName.equals(attraction.attractionName))
-							.count() == 0) {
-						if (nearAttraction(visitedLocation, attraction)) {
-							user.addUserReward(new UserReward(visitedLocation, attraction,
-									getRewardPoints(attraction, user)));
+	public CompletableFuture<Void> calculateRewards(User user) {
+		ExecutorService executor = Executors.newFixedThreadPool(thread);
+		List<CompletableFuture<Void>> futures = user.getVisitedLocations().stream()
+				.map(visitedLocation -> CompletableFuture.runAsync(() -> {
+					for (Attraction attraction : gpsUtil.getAttractions()) {
+						if (user.getUserRewards().stream()
+								.noneMatch(r -> r.attraction.attractionName.equals(attraction.attractionName))
+								&& nearAttraction(visitedLocation, attraction)) {
+							user.addUserReward(new UserReward(visitedLocation, attraction, getRewardPoints(attraction, user)));
 						}
 					}
-				}
-			}
-		} finally {
-			verrou.unlock();
-		}
+				}, executor))
+				.collect(Collectors.toList());
+
+		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+				.thenRun(executor::shutdown);
 	}
 
 	public boolean isWithinAttractionProximity(Attraction attraction, Location location) {
 		return getDistance(attraction, location) > attractionProximityRange ? false : true;
 	}
 
-	private synchronized boolean nearAttraction(VisitedLocation visitedLocation, Attraction attraction) {
+	private boolean nearAttraction(VisitedLocation visitedLocation, Attraction attraction) {
 		return getDistance(attraction, visitedLocation.location) > proximityBuffer ? false : true;
 	}
 
-	private synchronized int getRewardPoints(Attraction attraction, User user) {
-		Lock verrou = new ReentrantLock();
-		verrou.lock();
-		try {
-			return rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());
-		} finally {
-			verrou.unlock();
-		}
+	private int getRewardPoints(Attraction attraction, User user) {
+		return rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());
 	}
 
-	public synchronized double getDistance(Location loc1, Location loc2) {
+	public double getDistance(Location loc1, Location loc2) {
 		double lat1 = Math.toRadians(loc1.latitude);
 		double lon1 = Math.toRadians(loc1.longitude);
 		double lat2 = Math.toRadians(loc2.latitude);

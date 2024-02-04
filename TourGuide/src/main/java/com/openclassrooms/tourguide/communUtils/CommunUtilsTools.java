@@ -3,7 +3,8 @@ package com.openclassrooms.tourguide.communUtils;
 /**
  * Some javadoc.
  * 
- * This class can contains different utility methods for modified or checking and get
+ * This class can contains different utility methods for modified or checking
+ * and get
  * strings.
  */
 public class CommunUtilsTools {

@@ -1,12 +1,5 @@
 package com.openclassrooms.tourguide.service;
 
-import com.openclassrooms.tourguide.dto.FiveNearbyAttractions;
-import com.openclassrooms.tourguide.dto.NearestAttraction;
-import com.openclassrooms.tourguide.helper.InternalTestHelper;
-import com.openclassrooms.tourguide.tracker.Tracker;
-import com.openclassrooms.tourguide.user.User;
-import com.openclassrooms.tourguide.user.UserReward;
-
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -17,7 +10,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
-import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -25,6 +17,13 @@ import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
+import com.openclassrooms.tourguide.dto.FiveNearbyAttractions;
+import com.openclassrooms.tourguide.dto.NearestAttraction;
+import com.openclassrooms.tourguide.helper.InternalTestHelper;
+import com.openclassrooms.tourguide.tracker.Tracker;
+import com.openclassrooms.tourguide.user.User;
+import com.openclassrooms.tourguide.user.UserReward;
 
 import gpsUtil.GpsUtil;
 import gpsUtil.location.Attraction;
@@ -95,9 +94,13 @@ public class TourGuideService {
 		return providers;
 	}
 
-	public synchronized VisitedLocation trackUserLocation(User user) {
+	public VisitedLocation trackUserLocation(User user) {
+		// Timer test to visualize the potential slowing method :
+		// 49ms - Bigest
 		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
+		// >0ms
 		user.addToVisitedLocations(visitedLocation);
+		// 19ms
 		rewardsService.calculateRewards(user);
 		return visitedLocation;
 	}
@@ -128,23 +131,22 @@ public class TourGuideService {
 		VisitedLocation userVisitedLocation = getUserLocation(user);
 		Location userLocation = userVisitedLocation.location;
 
-		// Set loca of user :
-		double lat = userLocation.latitude;
-		double lon = userLocation.longitude;
-
 		// Get the attraction and set up the map :
 		List<NearestAttraction> nearestAttractions = new ArrayList();
 
 		for (Attraction attraction : getNearByAttractions(userVisitedLocation)) {
 			int rewardPoints = rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());
-			double distance = rewardsService.getDistance(userLocation, userLocation); // TODO check it's look like it's 0 each time
-			NearestAttraction NA = new NearestAttraction(attraction, rewardPoints, distance);
+			double distance = rewardsService.getDistance(userLocation,
+					new Location(attraction.latitude, attraction.longitude));
+			NearestAttraction NA = new NearestAttraction(attraction.latitude, attraction.longitude, attraction.attractionName,
+					rewardPoints, distance);
 			nearestAttractions.add(NA);
 		}
 
 		// Init request data :
-		FiveNearbyAttractions fiveNA = new FiveNearbyAttractions(lat, lon, nearestAttractions);
-		
+		FiveNearbyAttractions fiveNA = new FiveNearbyAttractions(userLocation.latitude, userLocation.longitude,
+				nearestAttractions);
+
 		return fiveNA;
 	}
 

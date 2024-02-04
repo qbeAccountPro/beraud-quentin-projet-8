@@ -2,9 +2,6 @@ package com.openclassrooms.tourguide.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import gpsUtil.location.Attraction;
 
 /**
  * 
@@ -15,9 +12,10 @@ import gpsUtil.location.Attraction;
  */
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
 public class NearestAttraction {
-  Attraction attraction;
+  double latitude;
+  double longitude;
+  String attractionName;
   int rewardPoint;
   double distanceFromCurrentUser;
 }
