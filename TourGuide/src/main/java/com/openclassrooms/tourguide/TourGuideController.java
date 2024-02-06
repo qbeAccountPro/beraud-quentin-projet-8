@@ -9,9 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import gpsUtil.location.VisitedLocation;
 
-import com.openclassrooms.tourguide.communUtils.CommunUtilsTools;
 import com.openclassrooms.tourguide.dto.FiveNearbyAttractions;
-import com.openclassrooms.tourguide.logging.EndpointsLogger;
 import com.openclassrooms.tourguide.service.TourGuideService;
 import com.openclassrooms.tourguide.user.User;
 import com.openclassrooms.tourguide.user.UserReward;
@@ -21,7 +19,6 @@ import tripPricer.Provider;
 @RestController
 public class TourGuideController {
 
-    private EndpointsLogger log = new EndpointsLogger();
 
     @Autowired
     TourGuideService tourGuideService;
@@ -52,7 +49,6 @@ public class TourGuideController {
 
     @RequestMapping("/getNearbyAttractions")
     public FiveNearbyAttractions getNearbyAttractions(@RequestParam String userName) {
-        log.request(CommunUtilsTools.getCurrentMethodName());
         return tourGuideService
                 .getFiveNearbyAttractionsWithRewardsPoint(userName);
         // TODO CHECK DISTANT VALUE IS 0 BUT THE RETURN WORKS

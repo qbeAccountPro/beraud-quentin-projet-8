@@ -1,12 +1,12 @@
 package com.openclassrooms.tourguide.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.openclassrooms.tourguide.user.User;
@@ -29,8 +29,7 @@ public class RewardsService {
 	private final GpsUtil gpsUtil;
 	private final RewardCentral rewardsCentral;
 
-	@Value("${threadForRewardsService}")
-	private int thread;
+	private ExecutorService executorService = Executors.newFixedThreadPool(80);
 
 	public RewardsService(GpsUtil gpsUtil, RewardCentral rewardCentral) {
 		this.gpsUtil = gpsUtil;
@@ -46,21 +45,25 @@ public class RewardsService {
 	}
 
 	public CompletableFuture<Void> calculateRewards(User user) {
-		ExecutorService executor = Executors.newFixedThreadPool(thread);
-		List<CompletableFuture<Void>> futures = user.getVisitedLocations().stream()
-				.map(visitedLocation -> CompletableFuture.runAsync(() -> {
-					for (Attraction attraction : gpsUtil.getAttractions()) {
-						if (user.getUserRewards().stream()
-								.noneMatch(r -> r.attraction.attractionName.equals(attraction.attractionName))
-								&& nearAttraction(visitedLocation, attraction)) {
-							user.addUserReward(new UserReward(visitedLocation, attraction, getRewardPoints(attraction, user)));
-						}
-					}
-				}, executor))
-				.collect(Collectors.toList());
 
-		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-				.thenRun(executor::shutdown);
+		List<VisitedLocation> visitedLocations = user.getVisitedLocations();
+		List<CompletableFuture<Void>> futures = new ArrayList<>();
+
+		CopyOnWriteArrayList<VisitedLocation> visitedLocationCoW = new CopyOnWriteArrayList<>(visitedLocations);
+		for (VisitedLocation visitedLocation : visitedLocationCoW) {
+
+			futures.add(CompletableFuture.runAsync(() -> {
+				for (Attraction attraction : gpsUtil.getAttractions()) {
+					if (user.getUserRewards().stream()
+							.noneMatch(r -> r.attraction.attractionName.equals(attraction.attractionName))
+							&& nearAttraction(visitedLocation, attraction)) {
+						user.addUserReward(new UserReward(visitedLocation, attraction, getRewardPoints(attraction, user)));
+					}
+				}
+			}, executorService).thenRun(executorService::shutdown));
+		}
+
+		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
 	}
 
 	public boolean isWithinAttractionProximity(Attraction attraction, Location location) {

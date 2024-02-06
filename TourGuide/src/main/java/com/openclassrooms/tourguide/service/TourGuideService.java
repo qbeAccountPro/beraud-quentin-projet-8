@@ -11,12 +11,19 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.apache.logging.log4j.spi.CopyOnWrite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.apache.commons.lang3.time.StopWatch;
 
 import com.openclassrooms.tourguide.dto.FiveNearbyAttractions;
 import com.openclassrooms.tourguide.dto.NearestAttraction;
@@ -35,6 +42,8 @@ import tripPricer.TripPricer;
 
 @Service
 public class TourGuideService {
+
+	private ExecutorService executorService = Executors.newFixedThreadPool(20);
 
 	private Logger logger = LoggerFactory.getLogger(TourGuideService.class);
 	private final GpsUtil gpsUtil;
@@ -67,7 +76,7 @@ public class TourGuideService {
 
 	public VisitedLocation getUserLocation(User user) {
 		VisitedLocation visitedLocation = (user.getVisitedLocations().size() > 0) ? user.getLastVisitedLocation()
-				: trackUserLocation(user);
+				: trackUserLocation(user).join();
 		return visitedLocation;
 	}
 
@@ -85,6 +94,10 @@ public class TourGuideService {
 		}
 	}
 
+	public void shutdownExecutorService() {
+		executorService.shutdown();
+	}
+
 	public synchronized List<Provider> getTripDeals(User user) {
 		int cumulatativeRewardPoints = user.getUserRewards().stream().mapToInt(i -> i.getRewardPoints()).sum();
 		List<Provider> providers = tripPricer.getPrice(tripPricerApiKey, user.getUserId(),
@@ -94,15 +107,20 @@ public class TourGuideService {
 		return providers;
 	}
 
-	public VisitedLocation trackUserLocation(User user) {
-		// Timer test to visualize the potential slowing method :
-		// 49ms - Bigest
-		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
-		// >0ms
-		user.addToVisitedLocations(visitedLocation);
-		// 19ms
-		rewardsService.calculateRewards(user);
-		return visitedLocation;
+	public CompletableFuture<VisitedLocation> trackUserLocation(User user) {
+		CompletableFuture<VisitedLocation> future = CompletableFuture.supplyAsync(() -> {
+			VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
+			user.addToVisitedLocations(visitedLocation);
+			return visitedLocation;
+		}, executorService);
+
+		future.thenRunAsync(() -> {
+			rewardsService.calculateRewards(user);
+		}, executorService).thenRun(() -> {
+			executorService.shutdown();
+		});
+
+		return future;
 	}
 
 	public synchronized List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
@@ -116,7 +134,7 @@ public class TourGuideService {
 		return fiveNearestAttractions;
 	}
 
-	private synchronized void addShutDownHook() {
+	private void addShutDownHook() {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
 				tracker.stopTracking();
@@ -132,7 +150,7 @@ public class TourGuideService {
 		Location userLocation = userVisitedLocation.location;
 
 		// Get the attraction and set up the map :
-		List<NearestAttraction> nearestAttractions = new ArrayList();
+		List<NearestAttraction> nearestAttractions = new ArrayList<NearestAttraction>();
 
 		for (Attraction attraction : getNearByAttractions(userVisitedLocation)) {
 			int rewardPoints = rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());

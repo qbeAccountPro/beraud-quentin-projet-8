@@ -42,16 +42,11 @@ public class Tracker extends Thread {
 				logger.debug("Tracker stopping");
 				break;
 			}
-
 			List<User> users = tourGuideService.getAllUsers();
 			CopyOnWriteArrayList<User> usersCoW = new CopyOnWriteArrayList<>(users);
 			logger.debug("Begin Tracker. Tracking " + users.size() + " users.");
 			stopWatch.start();
-			for (User u : usersCoW) {
-				tourGuideService.trackUserLocation(u);
-			}
-			// users.forEach(u -> tourGuideService.trackUserLocation(u));
-
+			usersCoW.forEach(u -> tourGuideService.trackUserLocation(u));
 			stopWatch.stop();
 			logger.debug("Tracker Time Elapsed: " + TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime()) + " seconds.");
 			stopWatch.reset();
@@ -62,6 +57,5 @@ public class Tracker extends Thread {
 				break;
 			}
 		}
-
 	}
 }

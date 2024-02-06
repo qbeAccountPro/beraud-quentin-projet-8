@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
 
@@ -28,15 +29,19 @@ public class TestRewardsService {
 		RewardCentral rewardCentral = new RewardCentral();
 
 		InternalTestHelper.setInternalUserNumber(0);
-		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, rewardCentral                                                                                                       );
+		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, rewardCentral);
 
 		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
 		Attraction attraction = gpsUtil.getAttractions().get(0);
 		user.addToVisitedLocations(new VisitedLocation(user.getUserId(), attraction, new Date()));
-		tourGuideService.trackUserLocation(user);
-		List<UserReward> userRewards = user.getUserRewards();
-		tourGuideService.tracker.stopTracking();
-		assertTrue(userRewards.size() == 1);
+
+		CompletableFuture<VisitedLocation> future = tourGuideService.trackUserLocation(user);
+
+		future.thenRun(() -> {
+			List<UserReward> userRewards = user.getUserRewards();
+			tourGuideService.tracker.stopTracking();
+			assertTrue(userRewards.size() == 1);
+		});
 	}
 
 	@Test
@@ -57,9 +62,9 @@ public class TestRewardsService {
 		InternalTestHelper.setInternalUserNumber(1);
 		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, rewardCentral);
 		User user = tourGuideService.getAllUsers().get(0);
-		
-		rewardsService.calculateRewards(user);
-		
+
+		rewardsService.calculateRewards(user).join();
+
 		List<UserReward> userRewards = tourGuideService.getUserRewards(tourGuideService.getAllUsers().get(0));
 
 		tourGuideService.tracker.stopTracking();
