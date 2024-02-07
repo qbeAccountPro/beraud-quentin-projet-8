@@ -36,9 +36,11 @@ jobs:
       # Compiler et construire le projet avec Maven
 
     - name: Run tests
-      run: mvn test
+      run: |
+        cd TourGuide
+        mvn test
       # Exécuter les tests unitaires du projet
-      
+
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
