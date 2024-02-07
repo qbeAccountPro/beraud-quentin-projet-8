@@ -25,11 +25,11 @@ jobs:
         # Use JDK 11
 
     - name: Build with Maven
-      run: mvn -B clean package --file pom.xml
+      run: mvn -B clean package --file TourGuide\pom.xml
       # Compiler et construire le projet avec Maven
 
-    - name: Run tests
-      run: mvn test
+    #- name: Run tests
+     # run: mvn test
       # Exécuter les tests unitaires du projet
     - name: Upload artifact
       uses: actions/upload-artifact@v2
