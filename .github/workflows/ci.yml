@@ -1,0 +1,38 @@
+name: CI
+# Workflow CI
+
+on:
+  push:
+    branches:
+      - main
+# Launch workflow -> commits on main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Use an virtual ubuntu to run it
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      # Get the source code
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v2
+      with:
+        java-version: '11'
+        # Use JDK 11
+
+    - name: Build with Maven
+      run: mvn -B clean package --file pom.xml
+      # Compiler et construire le projet avec Maven
+
+    - name: Run tests
+      run: mvn test
+      # Exécuter les tests unitaires du projet
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: my-artifact
+        path: target/*.jar
+        # Télécharger les artefacts générés en tant qu'artefact de construction
