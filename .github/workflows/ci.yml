@@ -35,9 +35,6 @@ jobs:
       run: mvn -B clean package --file TourGuide/pom.xml
       # Compiler et construire le projet avec Maven
 
-    #- name: Run tests
-     # run: mvn test
-      # Exécuter les tests unitaires du projet
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
