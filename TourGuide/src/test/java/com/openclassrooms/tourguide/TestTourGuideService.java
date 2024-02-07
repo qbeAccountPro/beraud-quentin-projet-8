@@ -134,5 +134,4 @@ public class TestTourGuideService {
 
 		assertEquals(10, providers.size());
 	}
-
 }

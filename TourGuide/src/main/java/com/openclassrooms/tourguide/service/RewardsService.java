@@ -18,6 +18,11 @@ import gpsUtil.location.Location;
 import gpsUtil.location.VisitedLocation;
 import rewardCentral.RewardCentral;
 
+/**
+ * Some Javadoc :
+ * 
+ * The RewardsService class provides methods for calculating rewards for users.
+ */
 @Service
 public class RewardsService {
 	private static final double STATUTE_MILES_PER_NAUTICAL_MILE = 1.15077945;
@@ -29,11 +34,10 @@ public class RewardsService {
 	private final GpsUtil gpsUtil;
 	private final RewardCentral rewardsCentral;
 
-	private ExecutorService executorService = Executors.newFixedThreadPool(80);
-
 	public RewardsService(GpsUtil gpsUtil, RewardCentral rewardCentral) {
 		this.gpsUtil = gpsUtil;
 		this.rewardsCentral = rewardCentral;
+
 	}
 
 	public void setProximityBuffer(int proximityBuffer) {
@@ -44,26 +48,39 @@ public class RewardsService {
 		proximityBuffer = defaultProximityBuffer;
 	}
 
+	/**
+	 * Some Javadoc :
+	 * 
+	 * This method calculate the rewards for a specific user.
+	 * It takes each visited location and compares them with each attraction.
+	 * If an attraction is at least inside the nearestdistance value from the user
+	 * visited location, the reward is assigned.
+	 * 
+	 */
 	public CompletableFuture<Void> calculateRewards(User user) {
-
 		List<VisitedLocation> visitedLocations = user.getVisitedLocations();
 		List<CompletableFuture<Void>> futures = new ArrayList<>();
-
 		CopyOnWriteArrayList<VisitedLocation> visitedLocationCoW = new CopyOnWriteArrayList<>(visitedLocations);
-		for (VisitedLocation visitedLocation : visitedLocationCoW) {
 
-			futures.add(CompletableFuture.runAsync(() -> {
-				for (Attraction attraction : gpsUtil.getAttractions()) {
-					if (user.getUserRewards().stream()
-							.noneMatch(r -> r.attraction.attractionName.equals(attraction.attractionName))
-							&& nearAttraction(visitedLocation, attraction)) {
-						user.addUserReward(new UserReward(visitedLocation, attraction, getRewardPoints(attraction, user)));
+		ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+		CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+			for (Attraction attraction : gpsUtil.getAttractions()) {
+				if (user.getUserRewards().stream()
+						.noneMatch(r -> r.attraction.attractionName.equals(attraction.attractionName))) {
+					for (VisitedLocation visitedLocation2 : visitedLocationCoW) {
+						if (nearAttraction(visitedLocation2, attraction)) {
+							user.addUserReward(new UserReward(visitedLocation2, attraction, getRewardPoints(attraction, user)));
+						}
 					}
+				} else {
+					break;
 				}
-			}, executorService).thenRun(executorService::shutdown));
-		}
+			}
+		}, executorService);
+		futures.add(future);
 
-		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(executorService::shutdown);
 	}
 
 	public boolean isWithinAttractionProximity(Attraction attraction, Location location) {

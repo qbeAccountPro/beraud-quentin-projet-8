@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 /**
- * 
  * Some javadoc :
  * 
  * This class represent a nearest attraction. It owns the reward points and

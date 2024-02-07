@@ -12,18 +12,14 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.apache.logging.log4j.spi.CopyOnWrite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.apache.commons.lang3.time.StopWatch;
 
 import com.openclassrooms.tourguide.dto.FiveNearbyAttractions;
 import com.openclassrooms.tourguide.dto.NearestAttraction;
@@ -40,10 +36,14 @@ import rewardCentral.RewardCentral;
 import tripPricer.Provider;
 import tripPricer.TripPricer;
 
+/**
+ * Some Javadoc :
+ * 
+ * The TourGuideService class provides various services for managing users,
+ * tracking user locations, calculating rewards, and getting trip deals.
+ */
 @Service
 public class TourGuideService {
-
-	private ExecutorService executorService = Executors.newFixedThreadPool(20);
 
 	private Logger logger = LoggerFactory.getLogger(TourGuideService.class);
 	private final GpsUtil gpsUtil;
@@ -84,7 +84,7 @@ public class TourGuideService {
 		return internalUserMap.get(userName);
 	}
 
-	public synchronized List<User> getAllUsers() {
+	public List<User> getAllUsers() {
 		return internalUserMap.values().stream().collect(Collectors.toList());
 	}
 
@@ -94,11 +94,7 @@ public class TourGuideService {
 		}
 	}
 
-	public void shutdownExecutorService() {
-		executorService.shutdown();
-	}
-
-	public synchronized List<Provider> getTripDeals(User user) {
+	public List<Provider> getTripDeals(User user) {
 		int cumulatativeRewardPoints = user.getUserRewards().stream().mapToInt(i -> i.getRewardPoints()).sum();
 		List<Provider> providers = tripPricer.getPrice(tripPricerApiKey, user.getUserId(),
 				user.getUserPreferences().getNumberOfAdults(), user.getUserPreferences().getNumberOfChildren(),
@@ -108,6 +104,7 @@ public class TourGuideService {
 	}
 
 	public CompletableFuture<VisitedLocation> trackUserLocation(User user) {
+		ExecutorService executorService = Executors.newSingleThreadExecutor();
 		CompletableFuture<VisitedLocation> future = CompletableFuture.supplyAsync(() -> {
 			VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
 			user.addToVisitedLocations(visitedLocation);
@@ -115,15 +112,13 @@ public class TourGuideService {
 		}, executorService);
 
 		future.thenRunAsync(() -> {
-			rewardsService.calculateRewards(user);
-		}, executorService).thenRun(() -> {
-			executorService.shutdown();
-		});
+			rewardsService.calculateRewards(user).join();
+		}, executorService).thenRunAsync(executorService::shutdown);
 
 		return future;
 	}
 
-	public synchronized List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
+	public List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
 
 		List<Attraction> fiveNearestAttractions = gpsUtil.getAttractions().stream()
 				.sorted(Comparator
@@ -191,7 +186,7 @@ public class TourGuideService {
 		logger.debug("Created " + InternalTestHelper.getInternalUserNumber() + " internal test users.");
 	}
 
-	private synchronized void generateUserLocationHistory(User user) {
+	private void generateUserLocationHistory(User user) {
 		IntStream.range(0, 3).forEach(i -> {
 			user.addToVisitedLocations(new VisitedLocation(user.getUserId(),
 					new Location(generateRandomLatitude(), generateRandomLongitude()), getRandomTime()));
@@ -214,5 +209,4 @@ public class TourGuideService {
 		LocalDateTime localDateTime = LocalDateTime.now().minusDays(new Random().nextInt(30));
 		return Date.from(localDateTime.toInstant(ZoneOffset.UTC));
 	}
-
 }

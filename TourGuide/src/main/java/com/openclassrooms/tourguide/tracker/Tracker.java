@@ -13,6 +13,13 @@ import org.slf4j.LoggerFactory;
 import com.openclassrooms.tourguide.service.TourGuideService;
 import com.openclassrooms.tourguide.user.User;
 
+/**
+ * Some Javadoc :
+ * 
+ * The Tracker class is responsible for periodically tracking the location of
+ * users
+ * and updating the TourGuideService with the latest user locations.
+ */
 public class Tracker extends Thread {
 	private Logger logger = LoggerFactory.getLogger(Tracker.class);
 	private static final long trackingPollingInterval = TimeUnit.MINUTES.toSeconds(5);
