@@ -16,21 +16,18 @@ import gpsUtil.GpsUtil;
 import gpsUtil.location.Attraction;
 import gpsUtil.location.VisitedLocation;
 import rewardCentral.RewardCentral;
-import com.openclassrooms.tourguide.helper.InternalTestHelper;
 import com.openclassrooms.tourguide.service.RewardsService;
 import com.openclassrooms.tourguide.service.TourGuideService;
 import com.openclassrooms.tourguide.user.User;
 
 public class TestPerformance {
 
-	private int setInternalUserNumberTest = 1000;
 
 	@Test
 	public void highVolumeTrackLocation() throws InterruptedException, ExecutionException {
 		GpsUtil gpsUtil = new GpsUtil();
 		RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
 		RewardCentral rewardCentral = new RewardCentral();
-		InternalTestHelper.setInternalUserNumber(setInternalUserNumberTest);
 		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, rewardCentral);
 		List<User> users = tourGuideService.getAllUsers();
 		StopWatch stopWatch = new StopWatch();
@@ -55,7 +52,6 @@ public class TestPerformance {
 		RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
 		RewardCentral rewardCentral = new RewardCentral();
 
-		InternalTestHelper.setInternalUserNumber(setInternalUserNumberTest);
 		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
 		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService, rewardCentral);

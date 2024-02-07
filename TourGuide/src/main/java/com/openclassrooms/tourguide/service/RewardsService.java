@@ -62,7 +62,7 @@ public class RewardsService {
 		List<CompletableFuture<Void>> futures = new ArrayList<>();
 		CopyOnWriteArrayList<VisitedLocation> visitedLocationCoW = new CopyOnWriteArrayList<>(visitedLocations);
 
-		ExecutorService executorService = Executors.newSingleThreadExecutor();
+		ExecutorService executorService = Executors.newFixedThreadPool(50);
 
 		CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
 			for (Attraction attraction : gpsUtil.getAttractions()) {
