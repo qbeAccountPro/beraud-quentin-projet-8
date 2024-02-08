@@ -41,9 +41,10 @@ jobs:
         mvn test
       # Exécuter les tests unitaires du projet
 
+
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
         name: my-artifact
-        path: target/*.jar
+        path: TourGuide/target/*.jar
         # Télécharger les artefacts générés en tant qu'artefact de construction
