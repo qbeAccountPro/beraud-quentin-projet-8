@@ -66,10 +66,6 @@ public class TourGuideController {
     public FiveNearbyAttractions getNearbyAttractions(@RequestParam String userName) {
         return tourGuideService
                 .getFiveNearbyAttractionsWithRewardsPoint(userName);
-        // TODO CHECK DISTANT VALUE IS 0 BUT THE RETURN WORKS
-        // TODO check Attraction model car il y à des infos superflu renvoyer créer un
-        // DTO en plus
-
     }
 
     /**
