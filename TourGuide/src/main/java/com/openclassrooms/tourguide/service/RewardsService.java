@@ -79,8 +79,9 @@ public class RewardsService {
 			}
 		}, executorService);
 		futures.add(future);
-
-		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(executorService::shutdown);
+		
+		CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(executorService::shutdown);
+		return allFutures;
 	}
 
 	public boolean isWithinAttractionProximity(Attraction attraction, Location location) {
