@@ -64,9 +64,7 @@ public class TestRewardsService {
 		User user = tourGuideService.getAllUsers().get(0);
 
 		CompletableFuture<Void> future = rewardsService.calculateRewards(user);
-		while (!future.isDone()) {
-			// Waiting to GITHUB ACTION..
-		}
+		future.join();
 
 		List<UserReward> userRewards = tourGuideService.getUserRewards(user);
 

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RewardsService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">tourguide</a> &gt; <a href="index.source.html" class="el_package">com.openclassrooms.tourguide.service</a> &gt; <span class="el_source">RewardsService.java</span></div><h1>RewardsService.java</h1><pre class="source lang-java linenums">package com.openclassrooms.tourguide.service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import org.springframework.stereotype.Service;
+
+import com.openclassrooms.tourguide.user.User;
+import com.openclassrooms.tourguide.user.UserReward;
+
+import gpsUtil.GpsUtil;
+import gpsUtil.location.Attraction;
+import gpsUtil.location.Location;
+import gpsUtil.location.VisitedLocation;
+import rewardCentral.RewardCentral;
+
+/**
+ * Some Javadoc :
+ * 
+ * The RewardsService class provides methods for calculating rewards for users.
+ */
+@Service
+public class RewardsService {
+	private static final double STATUTE_MILES_PER_NAUTICAL_MILE = 1.15077945;
+
+	// proximity in miles
+<span class="fc" id="L31">	private int defaultProximityBuffer = 10;</span>
+<span class="fc" id="L32">	private int proximityBuffer = defaultProximityBuffer;</span>
+<span class="fc" id="L33">	private int attractionProximityRange = 200;</span>
+	private final GpsUtil gpsUtil;
+	private final RewardCentral rewardsCentral;
+
+<span class="fc" id="L37">	public RewardsService(GpsUtil gpsUtil, RewardCentral rewardCentral) {</span>
+<span class="fc" id="L38">		this.gpsUtil = gpsUtil;</span>
+<span class="fc" id="L39">		this.rewardsCentral = rewardCentral;</span>
+
+<span class="fc" id="L41">	}</span>
+
+	public void setProximityBuffer(int proximityBuffer) {
+<span class="fc" id="L44">		this.proximityBuffer = proximityBuffer;</span>
+<span class="fc" id="L45">	}</span>
+
+	public void setDefaultProximityBuffer() {
+<span class="nc" id="L48">		proximityBuffer = defaultProximityBuffer;</span>
+<span class="nc" id="L49">	}</span>
+
+	/**
+	 * Some Javadoc :
+	 * 
+	 * This method calculate the rewards for a specific user.
+	 * It takes each visited location and compares them with each attraction.
+	 * If an attraction is at least inside the nearestdistance value from the user
+	 * visited location, the reward is assigned.
+	 * 
+	 */
+	public CompletableFuture&lt;Void&gt; calculateRewards(User user) {
+<span class="fc" id="L61">		List&lt;VisitedLocation&gt; visitedLocations = user.getVisitedLocations();</span>
+<span class="fc" id="L62">		List&lt;CompletableFuture&lt;Void&gt;&gt; futures = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L63">		CopyOnWriteArrayList&lt;VisitedLocation&gt; visitedLocationCoW = new CopyOnWriteArrayList&lt;&gt;(visitedLocations);</span>
+
+<span class="fc" id="L65">		ExecutorService executorService = Executors.newFixedThreadPool(50);</span>
+
+<span class="fc" id="L67">		CompletableFuture&lt;Void&gt; future = CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">			for (Attraction attraction : gpsUtil.getAttractions()) {</span>
+<span class="fc" id="L69">				if (user.getUserRewards().stream()</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">						.noneMatch(r -&gt; r.attraction.attractionName.equals(attraction.attractionName))) {</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">					for (VisitedLocation visitedLocation2 : visitedLocationCoW) {</span>
+<span class="fc bfc" id="L72" title="All 2 branches covered.">						if (nearAttraction(visitedLocation2, attraction)) {</span>
+<span class="fc" id="L73">							user.addUserReward(new UserReward(visitedLocation2, attraction, getRewardPoints(attraction, user)));</span>
+						}
+<span class="fc" id="L75">					}</span>
+				} else {
+					break;
+				}
+<span class="fc" id="L79">			}</span>
+<span class="fc" id="L80">		}, executorService);</span>
+<span class="fc" id="L81">		futures.add(future);</span>
+
+<span class="fc" id="L83">		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(executorService::shutdown);</span>
+	}
+
+	public boolean isWithinAttractionProximity(Attraction attraction, Location location) {
+<span class="pc bpc" id="L87" title="1 of 2 branches missed.">		return getDistance(attraction, location) &gt; attractionProximityRange ? false : true;</span>
+	}
+
+	private boolean nearAttraction(VisitedLocation visitedLocation, Attraction attraction) {
+<span class="fc bfc" id="L91" title="All 2 branches covered.">		return getDistance(attraction, visitedLocation.location) &gt; proximityBuffer ? false : true;</span>
+	}
+
+	private int getRewardPoints(Attraction attraction, User user) {
+<span class="fc" id="L95">		return rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());</span>
+	}
+
+	public double getDistance(Location loc1, Location loc2) {
+<span class="fc" id="L99">		double lat1 = Math.toRadians(loc1.latitude);</span>
+<span class="fc" id="L100">		double lon1 = Math.toRadians(loc1.longitude);</span>
+<span class="fc" id="L101">		double lat2 = Math.toRadians(loc2.latitude);</span>
+<span class="fc" id="L102">		double lon2 = Math.toRadians(loc2.longitude);</span>
+
+<span class="fc" id="L104">		double angle = Math.acos(Math.sin(lat1) * Math.sin(lat2)</span>
+<span class="fc" id="L105">				+ Math.cos(lat1) * Math.cos(lat2) * Math.cos(lon1 - lon2));</span>
+
+<span class="fc" id="L107">		double nauticalMiles = 60 * Math.toDegrees(angle);</span>
+
+<span class="fc" id="L109">		double statuteMiles = STATUTE_MILES_PER_NAUTICAL_MILE * nauticalMiles;</span>
+
+<span class="fc" id="L111">		return statuteMiles;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

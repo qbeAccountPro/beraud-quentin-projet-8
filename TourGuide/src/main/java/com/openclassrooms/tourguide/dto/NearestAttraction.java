@@ -2,6 +2,7 @@ package com.openclassrooms.tourguide.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Some javadoc :
@@ -11,6 +12,7 @@ import lombok.Data;
  */
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class NearestAttraction {
   double latitude;
   double longitude;

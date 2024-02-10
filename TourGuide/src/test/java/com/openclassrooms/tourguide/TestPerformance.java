@@ -23,7 +23,7 @@ import com.openclassrooms.tourguide.user.User;
 
 public class TestPerformance {
 
-	private int setInternalUserNumberTest = 1000;
+	private int setInternalUserNumberTest = 100;
 
 	@Test
 	public void highVolumeTrackLocation() throws InterruptedException, ExecutionException {

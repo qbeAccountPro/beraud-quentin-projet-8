@@ -134,4 +134,16 @@ public class TestTourGuideService {
 
 		assertEquals(10, providers.size());
 	}
+
+	public void testGetFiveNearbyAttractionsWithRewardsPoint() {
+		
+	}
+
+	public void testGetTripDeals() {
+		
+	}
+
+	public void testGetUserLocation() {
+		
+	}
 }
