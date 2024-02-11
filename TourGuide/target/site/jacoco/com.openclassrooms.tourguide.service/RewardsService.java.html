@@ -79,36 +79,37 @@ public class RewardsService {
 <span class="fc" id="L79">			}</span>
 <span class="fc" id="L80">		}, executorService);</span>
 <span class="fc" id="L81">		futures.add(future);</span>
-
-<span class="fc" id="L83">		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(executorService::shutdown);</span>
+		
+<span class="fc" id="L83">		CompletableFuture&lt;Void&gt; allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(executorService::shutdownNow);</span>
+<span class="fc" id="L84">		return allFutures;</span>
 	}
 
 	public boolean isWithinAttractionProximity(Attraction attraction, Location location) {
-<span class="pc bpc" id="L87" title="1 of 2 branches missed.">		return getDistance(attraction, location) &gt; attractionProximityRange ? false : true;</span>
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">		return getDistance(attraction, location) &gt; attractionProximityRange ? false : true;</span>
 	}
 
 	private boolean nearAttraction(VisitedLocation visitedLocation, Attraction attraction) {
-<span class="fc bfc" id="L91" title="All 2 branches covered.">		return getDistance(attraction, visitedLocation.location) &gt; proximityBuffer ? false : true;</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">		return getDistance(attraction, visitedLocation.location) &gt; proximityBuffer ? false : true;</span>
 	}
 
 	private int getRewardPoints(Attraction attraction, User user) {
-<span class="fc" id="L95">		return rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());</span>
+<span class="fc" id="L96">		return rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());</span>
 	}
 
 	public double getDistance(Location loc1, Location loc2) {
-<span class="fc" id="L99">		double lat1 = Math.toRadians(loc1.latitude);</span>
-<span class="fc" id="L100">		double lon1 = Math.toRadians(loc1.longitude);</span>
-<span class="fc" id="L101">		double lat2 = Math.toRadians(loc2.latitude);</span>
-<span class="fc" id="L102">		double lon2 = Math.toRadians(loc2.longitude);</span>
+<span class="fc" id="L100">		double lat1 = Math.toRadians(loc1.latitude);</span>
+<span class="fc" id="L101">		double lon1 = Math.toRadians(loc1.longitude);</span>
+<span class="fc" id="L102">		double lat2 = Math.toRadians(loc2.latitude);</span>
+<span class="fc" id="L103">		double lon2 = Math.toRadians(loc2.longitude);</span>
 
-<span class="fc" id="L104">		double angle = Math.acos(Math.sin(lat1) * Math.sin(lat2)</span>
-<span class="fc" id="L105">				+ Math.cos(lat1) * Math.cos(lat2) * Math.cos(lon1 - lon2));</span>
+<span class="fc" id="L105">		double angle = Math.acos(Math.sin(lat1) * Math.sin(lat2)</span>
+<span class="fc" id="L106">				+ Math.cos(lat1) * Math.cos(lat2) * Math.cos(lon1 - lon2));</span>
 
-<span class="fc" id="L107">		double nauticalMiles = 60 * Math.toDegrees(angle);</span>
+<span class="fc" id="L108">		double nauticalMiles = 60 * Math.toDegrees(angle);</span>
 
-<span class="fc" id="L109">		double statuteMiles = STATUTE_MILES_PER_NAUTICAL_MILE * nauticalMiles;</span>
+<span class="fc" id="L110">		double statuteMiles = STATUTE_MILES_PER_NAUTICAL_MILE * nauticalMiles;</span>
 
-<span class="fc" id="L111">		return statuteMiles;</span>
+<span class="fc" id="L112">		return statuteMiles;</span>
 	}
 
 }
