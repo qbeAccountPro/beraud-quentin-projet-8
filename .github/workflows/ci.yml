@@ -1,5 +1,5 @@
-name: CI
-# Workflow CI
+name: TourGuideMainCI
+# Workflow TourGuideMainCI
 on:
   push:
     branches:
