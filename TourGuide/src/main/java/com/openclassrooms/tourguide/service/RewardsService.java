@@ -80,7 +80,7 @@ public class RewardsService {
 		}, executorService);
 		futures.add(future);
 		
-		CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(executorService::shutdown);
+		CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(executorService::shutdownNow);
 		return allFutures;
 	}
 
