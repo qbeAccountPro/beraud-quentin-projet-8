@@ -56,7 +56,7 @@ public class TourGuideControllerTests {
 
     public void setUpUser() {
         if (tourGuideService.getUser(user.getUserName()) == null) {
-            rewardsService.calculateRewards(user).join();
+            rewardsService.calculateRewards(user);
             tourGuideService.addUser(user);
         }
     }

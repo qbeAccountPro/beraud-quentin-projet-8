@@ -77,10 +77,13 @@ public class RewardsService {
 					break;
 				}
 			}
-		}, executorService);
-		futures.add(future);
+		}, executorService).whenComplete((result, throwable) -> {
+			executorService.shutdown();
+		});
 		
-		CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(executorService::shutdown);
+		futures.add(future);
+
+		CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
 		return allFutures;
 	}
 

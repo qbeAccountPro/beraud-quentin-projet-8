@@ -104,17 +104,15 @@ public class TourGuideService {
 	}
 
 	public CompletableFuture<VisitedLocation> trackUserLocation(User user) {
-		ExecutorService executorService = Executors.newFixedThreadPool(50);
+		ExecutorService executorService = Executors.newFixedThreadPool(80);
 		CompletableFuture<VisitedLocation> future = CompletableFuture.supplyAsync(() -> {
 			VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
 			user.addToVisitedLocations(visitedLocation);
-			return visitedLocation;
-		}, executorService);
-
-		future.thenRunAsync(() -> {
 			rewardsService.calculateRewards(user).join();
-		}, executorService).thenRunAsync(executorService::shutdown);
-
+			return visitedLocation;
+		}, executorService).whenComplete((result, throwable) -> {
+			executorService.shutdown();
+		});
 		return future;
 	}
 
