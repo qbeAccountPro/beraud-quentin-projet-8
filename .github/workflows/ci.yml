@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, windows, x64, MSI]
+    runs-on: self-hosted
 
     steps:
     - name: Checkout code
@@ -37,7 +37,7 @@ jobs:
 
   test:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
     - name: Checkout code
@@ -69,7 +69,7 @@ jobs:
 
   release:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
     - name: Checkout code
