@@ -51,14 +51,12 @@ public class TourGuideService {
 	private final RewardCentral rewardsCentral;
 	private final TripPricer tripPricer = new TripPricer();
 	public final Tracker tracker;
-	private final ExecutorService executorService;
 	boolean testMode = true;
 
 	public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService, RewardCentral rewardsCentral) {
 		this.gpsUtil = gpsUtil;
 		this.rewardsService = rewardsService;
 		this.rewardsCentral = rewardsCentral;
-		this.executorService = Executors.newCachedThreadPool();
 
 		Locale.setDefault(Locale.US);
 
@@ -106,7 +104,7 @@ public class TourGuideService {
 	}
 
 	public CompletableFuture<VisitedLocation> trackUserLocation(User user) {
-		/* ExecutorService executorService = Executors.newCachedThreadPool(); */
+		ExecutorService executorService = Executors.newCachedThreadPool();
 		CompletableFuture<VisitedLocation> future = CompletableFuture.supplyAsync(() -> {
 			VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
 			user.addToVisitedLocations(visitedLocation);
