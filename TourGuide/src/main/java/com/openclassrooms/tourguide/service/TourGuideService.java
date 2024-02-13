@@ -103,6 +103,15 @@ public class TourGuideService {
 		return providers;
 	}
 
+	/**
+	 * Some Javadoc :
+	 *
+	 * This method asynchronously tracks the location of the specified user.
+	 * 
+	 * @param user the user whose location is to be tracked
+	 * @return a CompletableFuture representing the asynchronous computation of the
+	 *         user's visited location
+	 */
 	public CompletableFuture<VisitedLocation> trackUserLocation(User user) {
 		ExecutorService executorService = Executors.newCachedThreadPool();
 		CompletableFuture<VisitedLocation> future = CompletableFuture.supplyAsync(() -> {
@@ -116,14 +125,23 @@ public class TourGuideService {
 		return future;
 	}
 
+	/**
+	 * Some Javadoc :
+	 * 
+	 * Retrieves a list of the five nearest attractions based on the specified
+	 * visited location.
+	 * 
+	 * @param visitedLocation the visited location for which nearby attractions are
+	 *                        to be fetched
+	 * @return a list of the five nearest attractions to the specified visited
+	 *         location
+	 */
 	public List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
-
 		List<Attraction> fiveNearestAttractions = gpsUtil.getAttractions().stream()
 				.sorted(Comparator
 						.comparingDouble(attraction -> rewardsService.getDistance(attraction, visitedLocation.location)))
 				.limit(5)
 				.collect(Collectors.toList());
-
 		return fiveNearestAttractions;
 	}
 
@@ -135,16 +153,22 @@ public class TourGuideService {
 		});
 	}
 
+/**
+ * Some Javadoc :
+ * 
+ * Retrieves information about the five nearby attractions with rewards points for a given user.
+ *
+ * @param userName the name of the user for whom nearby attractions are to be fetched
+ * @return an object containing information about the five nearby attractions with rewards points
+ */
 	public FiveNearbyAttractions getFiveNearbyAttractionsWithRewardsPoint(String userName) {
-
-		// User information :
+		// Get User information
 		User user = getUser(userName);
 		VisitedLocation userVisitedLocation = getUserLocation(user);
 		Location userLocation = userVisitedLocation.location;
 
-		// Get the attraction and set up the map :
+		// For each of the five nearest attraction, we instantiated a DTO entity.(NearestAttraction) 
 		List<NearestAttraction> nearestAttractions = new ArrayList<NearestAttraction>();
-
 		for (Attraction attraction : getNearByAttractions(userVisitedLocation)) {
 			int rewardPoints = rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());
 			double distance = rewardsService.getDistance(userLocation,
@@ -154,11 +178,9 @@ public class TourGuideService {
 			nearestAttractions.add(NA);
 		}
 
-		// Init request data :
-		FiveNearbyAttractions fiveNA = new FiveNearbyAttractions(userLocation.latitude, userLocation.longitude,
+		// When the loop on the five nearest attraction is done, we return the DTO entity with user information.
+		return new FiveNearbyAttractions(userLocation.latitude, userLocation.longitude,
 				nearestAttractions);
-
-		return fiveNA;
 	}
 
 	/**********************************************************************************
